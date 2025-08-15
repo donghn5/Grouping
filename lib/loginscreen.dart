@@ -1,5 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'homescreen.dart';
+/*
+import 'package:google_sign_in/google_sign_in.dart';
+l
+Future<UserCredential> signInWithGoogle() async {
+  // Trigger the authentication flow
+  final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+  // Obtain the auth details from the request
+  final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+  // Create a new credential
+  final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+
+  // Once signed in, return the UserCredential
+  return await FirebaseAuth.instance.signInWithCredential(credential);
+}
+*/
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,11 +38,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.initState();
 
     // 1) 글자 타자 애니메이션
-    _typingCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _typingCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _typing = CurvedAnimation(parent: _typingCtrl, curve: Curves.easeInOut);
 
     // 2) 위로 올리기 애니메이션 (완료 후 1초 대기 뒤 시작)
-    _liftCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _liftCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 800));
     _lift = CurvedAnimation(parent: _liftCtrl, curve: Curves.easeInOutCubic);
 
     _typingCtrl.forward();
@@ -70,37 +90,41 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: AnimatedBuilder(
-          animation: listenBoth,
-          builder: (context, _) {
-            final v = _typing.value.clamp(0.0, 1.0);
-            final count = (runes.length * v).floor().clamp(0, runes.length);
-            final visible = String.fromCharCodes(runes.sublist(0, count));
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      AnimatedBuilder(
+        animation: listenBoth,
+        builder: (context, _) {
+          final v = _typing.value.clamp(0.0, 1.0);
+          final count = (runes.length * v).floor().clamp(0, runes.length);
+          final visible = String.fromCharCodes(runes.sublist(0, count));
 
-            // 위로 올라갈 거리 (완료 후 1초 뒤부터 시작)
-            final dy = -liftTarget * _lift.value;
+          final dy = -liftTarget * _lift.value;
 
-            return Transform.translate(
-              offset: Offset(0, dy),
-              child: SizedBox(
-                width: tp.width,
-                height: tp.height + 24,
-                child: Stack(
-                  children: [
-                    // 공간 확보용 투명 텍스트
-                    Opacity(opacity: 0, child: Text(text, style: _textStyle)),
-                    // 왼쪽부터 한 글자씩 나타나기
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(visible, style: _textStyle),
-                    ),
-                  ],
-                ),
+          return Transform.translate(
+            offset: Offset(0, dy),
+            child: SizedBox(
+              width: tp.width,
+              height: tp.height + 24,
+              child: Stack(
+                children: [
+                  const Opacity(opacity: 0, child: Text(text, /* style: _textStyle */)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(visible /*, style: _textStyle*/),
+                  ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
+      const SizedBox(height: 16),
+    ],
+  ),
+)
+);
+
   }
 }
