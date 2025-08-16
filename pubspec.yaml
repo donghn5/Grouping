@@ -41,6 +41,7 @@ dependencies:
   cloud_firestore: ^6.0.0
   firebase_auth: ^6.0.1
   google_sign_in: ^6.1.6
+  table_calendar: ^3.0.9
 
 dev_dependencies:
   flutter_test:
@@ -94,3 +95,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+  assets:
+    - assets/demo/
