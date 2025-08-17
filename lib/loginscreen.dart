@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'homescreen.dart'; // HomeScreen 경로를 프로젝트에 맞게 조정하세요.
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,36 +10,43 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
+  static const String _titleText = 'Grouping-';
+
+  // 타이핑 애니메이션: double + ceil() 사용
   late final AnimationController _typingCtrl;
   late final Animation<double> _typing;
 
+  // 위로 올리기 애니메이션
   late final AnimationController _liftCtrl;
   late final Animation<double> _lift;
 
-  bool _loading = false; // 버튼 중복 방지
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 1) 글자 타자 애니메이션
     _typingCtrl =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _typing = CurvedAnimation(parent: _typingCtrl, curve: Curves.easeInOut);
 
-    // 2) 위로 올리기 애니메이션 (완료 후 1초 대기 뒤 시작)
     _liftCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800));
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _lift = CurvedAnimation(parent: _liftCtrl, curve: Curves.easeInOutCubic);
 
-    _typingCtrl.forward();
     _typingCtrl.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
+        // 최종 프레임 강제 리빌드 → 마지막 글자 보장
+        if (mounted) setState(() {});
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) _liftCtrl.forward();
         });
       }
     });
+
+    _typingCtrl.forward();
   }
 
   @override
@@ -54,14 +62,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         color: Colors.black,
       );
 
-  // ⬇️ 구글 로그인(임시 스텁) — 나중에 google_sign_in 로직 연결
+  // 구글 로그인(임시 스텁)
   Future<void> _onGoogleSignIn() async {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      // TODO: 실제 Google Sign-In 연동 (google_sign_in / firebase_auth 등)
       await Future.delayed(const Duration(milliseconds: 400));
-
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -85,19 +91,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    const text = 'Grouping';
-
-    // 전체 폭/높이 계산(레이아웃 고정용)
+    // 레이아웃용 전체 텍스트 치수
     final tp = TextPainter(
-      text: TextSpan(text: text, style: _textStyle),
+      text: TextSpan(text: _titleText, style: _textStyle),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    final runes = text.runes.toList();
+    final runes = _titleText.runes.toList();
     final listenBoth = Listenable.merge([_typingCtrl, _liftCtrl]);
 
-    // 대략 위쪽으로 22% 만큼 이동
-    const liftFactor = 0.22; // 필요 시 0.18~0.28 사이로 미세조정
+    // 화면 높이의 22%만큼 위로 이동
+    const liftFactor = 0.22;
     final liftTarget = MediaQuery.of(context).size.height * liftFactor;
 
     return Scaffold(
@@ -110,41 +114,67 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               // 상단 애니메이션 영역
               Expanded(
                 child: Center(
-            child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      AnimatedBuilder(
-                  animation: listenBoth,
-                  builder: (context, _) {
-                    final v = _typing.value.clamp(0.0, 1.0);
-                    final count = (runes.length * v).floor().clamp(0, runes.length);
-                    final visible = String.fromCharCodes(runes.sublist(0, count));
+                  child: AnimatedBuilder(
+                    animation: listenBoth,
+                    builder: (context, _) {
+                      // 🔑 마지막 글자 보장: ceil() + clamp()
+                      final v = _typing.value; // 0..1
+                      final count = (_typingCtrl.status == AnimationStatus.completed)
+                          ? runes.length
+                          : (runes.length * v).ceil().clamp(0, runes.length);
 
-            // 위로 올라갈 거리 (완료 후 1초 뒤부터 시작)
-            final dy = -liftTarget * _lift.value;
+                      final visible =
+                          String.fromCharCodes(runes.sublist(0, count));
 
-            return Transform.translate(
-              offset: Offset(0, dy),
-              child: SizedBox(
-                width: tp.width,
-                height: tp.height + 24,
-                child: Stack(
-                  children: [
-                    // 공간 확보용 투명 텍스트
-                    Opacity(opacity: 0, child: Text(text, style: _textStyle)),
-                    // 왼쪽부터 한 글자씩 나타나기
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(visible, style: _textStyle),
-                    ),
-                  ],
+                      final dy = -liftTarget * _lift.value;
+
+                      return Transform.translate(
+                        offset: Offset(0, dy),
+                        child: SizedBox(
+                          width: tp.width,
+                          height: tp.height + 24,
+                          child: Stack(
+                            children: [
+                              // 공간 확보용 투명 텍스트(레이아웃 고정)
+                              Opacity(
+                                opacity: 0,
+                                child: Text(_titleText, style: _textStyle),
+                              ),
+                              // 왼쪽부터 한 글자씩 나타나기
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(visible, style: _textStyle),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            );
-          },
+
+              const SizedBox(height: 16),
+
+              // 버튼 영역
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : _onGoogleSignIn,
+                  icon: const Icon(Icons.login),
+                  label: Text(_loading ? '로그인 중...' : 'Google로 계속하기'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _loading ? null : _goHomeDirect,
+                child: const Text('건너뛰기'),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
